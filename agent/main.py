@@ -3,6 +3,7 @@ from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.messages import HumanMessage
+from deepagents import create_deep_agent, async_create_deep_agent
 
 from langchain_ollama import ChatOllama
 
@@ -18,19 +19,26 @@ async def main():
         }
     )
     tools= await client.get_tools()
-    agent=create_agent(model=llm,
-                       prompt="You are an assistant who helps users using your tools",
-                       tools=tools,
-                       checkpointer=InMemorySaver(),
-                       )
+    custom_subagent = {
+        "name": "user_info_agent",
+        "description": "Gets user info using available tools",
+        "prompt": "You are a specialized agent to get info about users",
+        "tools": tools
+    }
+
+    deep_agent = async_create_deep_agent(
+        model=llm,
+        instructions="You are an assistant who helps users redirecting to the correct agents",
+        subagents=[custom_subagent],
+        checkpointer=InMemorySaver(),
+    )
+
     common_config = {"configurable": {"thread_id": "1"}}
-
-    response= await agent.ainvoke({"messsage":[{"role":"user","content":"showme the name of the user with  id = 1 ? "}]},common_config)
-    print(f"------1--------------{response["messages"][-1].content}")
-    response= await agent.ainvoke({"messsage":[{"role":"user","content":" the id of user is 1"}]},common_config)
-    print(f"-------2--------------{response["messages"][-1].content}")
-    response= await agent.ainvoke({"messsage":[{"role":"user","content":" yes"}]},common_config)
-    print(f"-------3--------------{response["messages"][-1].content}")
-
+    
+    while True:
+        user_question = input("Enter your question: ")
+        result= await deep_agent.ainvoke({"messages": [HumanMessage(content=user_question)]},common_config, stream_mode="values")
+        print(result)
+    
 if __name__ == "__main__":
     asyncio.run(main())    
