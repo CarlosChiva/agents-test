@@ -15,9 +15,12 @@ services:
       - "7999:7999"
     # Optional: restart policy
     network_mode: "host"
+    # ---- Wait for ddbb to be healthy ----
     depends_on:
-      - ddbb
-   
+      ddbb:
+        condition: service_healthy
+    # -------------------------------------
+
   ddbb:
     build: ./ddbb/postgresql
     container_name: postgres-container
@@ -28,3 +31,10 @@ services:
       POSTGRES_DB: mydatabase
     ports:
       - "5433:5432"
+    # ---- Health‑check to signal readiness ----
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # -----------------------------------------
