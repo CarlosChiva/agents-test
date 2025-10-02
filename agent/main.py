@@ -4,10 +4,11 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_core.messages import HumanMessage
 from deepagents import create_deep_agent, async_create_deep_agent
+from langchain.chat_models import init_chat_model
 
 from langchain_ollama import ChatOllama
 
-llm = ChatOllama(model="gpt-oss:latest",temperature=1)
+llm = init_chat_model(model="ollama:gpt-oss:latest",temperature=1)
 async def main():
    # 1. Conectar al servidor MCP y obtener herramientas
     client = MultiServerMCPClient(
@@ -97,7 +98,12 @@ IMPORTANT: You must delegate to the appropriate subagent. Do not try to answer q
             print("="*60 + "\n")
     
     finally:
-        await client.cleanup()
+
+        del deep_agent
+        del custom_subagent
+        del user_info_agent_graph
+        del client
+
         print("\n✓ Sesión terminada")
 
 if __name__ == "__main__":
